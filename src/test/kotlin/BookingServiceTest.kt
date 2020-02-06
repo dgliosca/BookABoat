@@ -4,39 +4,43 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class BookingServiceTest {
+    private val bookingService = BookingService(List(10) { Seat(it + 1) }.toSet())
 
     @Test
     fun `retrieve available seats returns all seats`() {
-        val result = BookingService().availableSeats()
+        val result = bookingService.availableSeats()
         assertThat(result.size, equalTo(10))
     }
 
     @Test
     fun `book a seat`() {
-        val bookingService = BookingService()
-        assertTrue(bookingService.bookSeat(Seat("1A")))
+        assertTrue(bookingService.bookSeat(Seat(1)))
     }
 
     @Test
     fun `cannot book the same seat twice`() {
-        val bookingService = BookingService()
-        bookingService.bookSeat(Seat("goodseat"))
-        val bookSameSeat = bookingService.bookSeat(Seat("goodseat"))
+        bookingService.bookSeat(Seat(1))
+        val bookSameSeat = bookingService.bookSeat(Seat(1))
 
         assertThat(bookSameSeat, equalTo(false))
     }
+
+    @Test
+    fun `cannot book invalid seat`() {
+        val invalidSeat = Seat(-1)
+        assertThat(bookingService.bookSeat(invalidSeat), equalTo(false))
+    }
 }
 
-data class Seat(val seatName: String = "") {
+data class Seat(val seatName: Int)
 
-}
+class BookingService(private val allSeats: Set<Seat>) {
+    private val bookedSeats = mutableSetOf<Seat>()
 
-class BookingService {
-    private val seats  = mutableSetOf<Seat>()
-
-    fun availableSeats() : List<Seat> {
-        return List(10) { Seat() }
+    fun availableSeats(): Set<Seat> {
+        return allSeats - bookedSeats
     }
 
-    fun bookSeat(seat: Seat) = seats.add(seat)
+    fun bookSeat(seat: Seat) = if (allSeats.contains(seat)) bookedSeats.add(seat) else false
+
 }
