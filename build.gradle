@@ -15,6 +15,7 @@ dependencies {
     compile group: "org.http4k", name: "http4k-core", version: "3.233.0"
     compile group: "org.http4k", name: "http4k-server-jetty", version: "3.233.0"
     compile group: "org.http4k", name: "http4k-client-apache", version: "3.233.0"
+    compile group: "org.http4k", name: "http4k-format-jackson", version: "3.233.0"
 
     testImplementation('org.junit.jupiter:junit-jupiter:5.5.2')
 
