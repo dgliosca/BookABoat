@@ -1,33 +1,25 @@
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.natpryce.hamkrest.assertion.assertThat
 import com.natpryce.hamkrest.equalTo
+import org.http4k.client.ApacheClient
 import org.http4k.core.*
 import org.http4k.core.Method.GET
 import org.http4k.core.Method.PUT
 import org.http4k.core.Status.Companion.OK
+import org.http4k.filter.ClientFilters
+import org.http4k.routing.RoutingHttpHandler
 import org.http4k.routing.bind
 import org.http4k.routing.path
 import org.http4k.routing.routes
+import org.http4k.server.Jetty
+import org.http4k.server.asServer
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class BookingServiceHttpTest {
     private val boat = BookingService(List(10) { Seat(it + 1) }.toSet())
-    private val mapper = jacksonObjectMapper()
-    private val httpBoat = routes(
-        "/seats" bind GET to {
-            val availableSeats = boat.availableSeats()
-            Response(OK).body(mapper.writeValueAsString(availableSeats))
-        },
-        "/seat/{id}" bind PUT to { request ->
-            val seat = Seat((request.path("id") ?: error("TODO")).toInt())
-            val name = request.query("name") ?: error("TODO")
-            Response(OK).body(boat.bookSeat(seat, name).toString())
-        },
-        "/passenger-info" bind GET to {
-            Response.invoke(OK).body(mapper.writeValueAsString(boat.passengersInformation().toString()))
-        }
-    )
+    private val httpBoatServer = createHttpBoat(boat).asServer(Jetty(port = 8000)).start()
+    private val httpBoat: HttpHandler = ApacheClient().with(ClientFilters.SetBaseUriFrom(Uri.of("http://localhost:8000")))
 
     @Test
     fun `retrieve available seats returns all seats`() {
@@ -112,6 +104,25 @@ class BookingServiceTest {
             )
         )
     }
+}
+
+private fun createHttpBoat(bookingService: BookingService): RoutingHttpHandler {
+    val mapper = jacksonObjectMapper()
+
+    return routes(
+        "/seats" bind GET to {
+            val availableSeats = bookingService.availableSeats()
+            Response(OK).body(mapper.writeValueAsString(availableSeats))
+        },
+        "/seat/{id}" bind PUT to { request ->
+            val seat = Seat((request.path("id") ?: error("TODO")).toInt())
+            val name = request.query("name") ?: error("TODO")
+            Response(OK).body(bookingService.bookSeat(seat, name).toString())
+        },
+        "/passenger-info" bind GET to {
+            Response.invoke(OK).body(mapper.writeValueAsString(bookingService.passengersInformation().toString()))
+        }
+    )
 }
 
 data class Seat(val id: Int)
